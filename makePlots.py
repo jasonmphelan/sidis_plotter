@@ -152,6 +152,7 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 	plt.subplots_adjust( wspace=.1, hspace=.1 )
 	i = 0
 	yMax =0
+	yMin =0
 	p_bin = [1.25, 2.00, 2.50, 3.5, 5.00]
 
 	for xPlot in range( nQ2x ):
@@ -170,7 +171,8 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 					unc = []
 
 					for row in plots: 
-		
+						if row[1]=='nan' or float(row[1]) == 0:
+							continue	
 						x1.append(float(row[0])) 
 						y1.append(float(row[1]))
 						unc.append(float(row[2]))
@@ -178,11 +180,6 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 					xList.append(x1)
 					yList.append(y1) 
 					uncList.append(unc)
-
-			#for yDat in yList:
-				#if math.isfinite(max(yDat)) and max(yDat) > yMax:
-					#yMax = max(yDat)
-
 
 			
 			for j in range ( len ( yList ) ):
@@ -192,6 +189,8 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 			textHeight = 0.4
 			if( ( wType == 'w+' or wType == 'w-' ) and corrType == 'acc'):
 				textHeight = 5 
+			if( ( wType == 'w+' or wType == 'w-' ) and corrType == 'kaon'):
+				textHeight = .4
 			axs[xPlot, yPlot].text(.75, textHeight, r'%.1f $< Q^2 <$ %.1f'%(2 + .5*(i-1), 2+.5*(i)), fontsize=12)
 			
 			if corrType == 'kaon':
@@ -202,21 +201,27 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 	if corrType == 'acc':
 		if wType == 'w+/w-':
 			yMax = 1.5
+			yMin = 0
 		else:
-			yMax = 12. #8
+			yMax =6. #8
+			yMin = 0
 			folder = 'acceptance_corrections'
-	elif corrType == 'bin_migrations':
+	elif corrType == 'bin':
 		if wType == 'w+/w-':
 			yMax = 1.5
+			yMin = 0
 		else:
 			yMax = 2.5
+			yMin = 0
 			folder = 'bin_migrations'
 	else:
 		folder = 'kaon_corrections'
 		if wType == 'w+/w-':
 			yMax = 1.25
+			yMin = 0 #.65
 		else:
 			yMax = 1.05
+			yMin = 0
 			folder = 'kaon_corrections'
 		
 
@@ -225,7 +230,7 @@ def makeWeights( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType, corrType, b
 		ax.set_ylabel( getTitle(wType), fontsize=16)
 		ax.label_outer()
 	
-		ax.set_ylim( [0, yMax] )
+		ax.set_ylim( [yMin, yMax] )
 		ax.set_xlim( [0.3, 1] )
 	
 	for xPlot in range( nQ2x ):
@@ -325,13 +330,15 @@ def plotWeightUncertainties( nXbBins, nQ2x, nQ2y,  pathTofile, fileBase , wType,
 	plt.savefig('PDFs/corrections/{0}/uncertainty_{1}_q2_{2}_xB_{3}.pdf'.format(pathTofile, fileBase, i, nXb + 1,'r'), bbox_inches='tight')
 
 def makeAllWeights(inFileName):
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections' , 'w+/w-', 'acc')
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections_pip' , 'w+', 'acc')
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections_pim' , 'w-', 'acc')
-	
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration' , 'w+/w-', 'bin')
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration_pip' , 'w+', 'bin')
-	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration_pim' , 'w-', 'bin')
+	print('Do acceptance')
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections' , 'w+/w-', 'acc', 1)
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections_pip' , 'w+', 'acc',1)
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'acceptance_corrections_pim' , 'w-', 'acc',1)
+	print('Do bin migration')
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration' , 'w+/w-', 'bin',1)
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration_pip' , 'w+', 'bin',1)
+	makeWeights( 10, 4, 3,  '{0}'.format(inFileName), 'bin_migration_pim' , 'w-', 'bin',1)
+	print('Done')
 	
 def makeKaonWeights(inFileName):
 	
@@ -444,8 +451,6 @@ def makeRatioRatioBinned( fileList , titList, outFileName):
 				
 
 					ax = plt.gca()
-					ax.set_ylim( [0.75, 1.25] )
-					ax.set_xlim( [.3, .7] )
 
 			if isPlot == True:
 				plt.axhline( y = 1., color = 'black', linestyle = '--')
@@ -497,8 +502,9 @@ def makeAllRatioBinnedXb( file , outFileName):
 		
 				ax = plt.gca()
 				ax.set_ylim( [0, .8] )
+				ax.set_xlim( [0, .8] )
 
-		z = np.linspace( .3, 1., 500 )
+		z = np.linspace( .3, .8, 500 )
 		plt.plot( z, ff(z), color = 'black', linestyle = '--')
 		plt.xlabel(r'$z$')
 		plt.ylabel(r'$r$')
@@ -517,10 +523,10 @@ def makeAllRatioBinnedQ2( file , outFileName):
 		xList = []
 		yList = []	
 		uncList = []
+		i = -6
 		for q2 in range(12):
 
 
-			i = 0
 			with open( 'csvFiles/ratios/{0}/ratio_{1}_{2}.csv'.format(file, q2+1, xb+1) ,'r') as csvfile: 
 				plots = csv.reader(csvfile, delimiter = '\t') 
 				x1 = []
@@ -529,7 +535,7 @@ def makeAllRatioBinnedQ2( file , outFileName):
 
 				for row in plots: 
 			
-					x1.append(float(row[0]) + 0.005*i ) 
+					x1.append(float(row[0]) + 0.00075*i ) 
 					y1.append(float(row[1]))
 					unc.append(float(row[2]))
 				
@@ -546,12 +552,13 @@ def makeAllRatioBinnedQ2( file , outFileName):
 		
 				ax = plt.gca()
 				ax.set_ylim( [0, .8] )
+				ax.set_xlim( [.3, .8] )
 
 		z = np.linspace( .3, 1., 500 )
 		plt.plot( z, ff(z), color = 'black', linestyle = '--')
 		plt.xlabel(r'$z$')
 		plt.ylabel(r'$r$')
-		plt.text(.775, .40, r'%.2f $< x_B <$ %.2f'%(.1 + .05*(xb), .1+.05*(xb+1) ), fontsize=12)
+		plt.text(.65, .40, r'%.2f $< x_B <$ %.2f'%(.1 + .05*(xb), .1+.05*(xb+1) ), fontsize=12) #.775, .4
 		plt.legend()
 				#plt.show()
 		plt.savefig('PDFs/ratios/{0}/ratio_{1}_{2}.pdf'.format(outFileName, q2+1, xb+1), bbox_inches='tight')
